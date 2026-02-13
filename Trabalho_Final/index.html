@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gestor de Escola</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+      <div class="container">
+        <span class="navbar-brand fw-semibold">Gestor de Escola</span>
+        <span class="navbar-text small">Turmas • Alunos • Notas</span>
+      </div>
+    </nav>
+
+    <main class="container my-4">
+      <div id="alertHost" class="mb-3"></div>
+
+      <div class="row g-3">
+        <!-- LEFT: Classes -->
+        <section class="col-12 col-lg-4">
+          <div class="card shadow-sm">
+            <div class="card-header d-flex align-items-center justify-content-between">
+              <div>
+                <div class="fw-semibold">Turmas</div>
+                <div class="text-muted small">Criar, selecionar e remover</div>
+              </div>
+              <span id="badgeClassCount" class="badge text-bg-secondary">0</span>
+            </div>
+
+            <div class="card-body">
+              <form id="formAddClass" class="row g-2">
+                <div class="col-7">
+                  <label class="form-label small mb-1">Nome</label>
+                  <input id="className" class="form-control" placeholder="Ex: 10A" />
+                </div>
+                <div class="col-5">
+                  <label class="form-label small mb-1">Ano</label>
+                  <input id="classYear" class="form-control" type="number" min="10" max="12" value="10" />
+                </div>
+                <div class="col-12">
+                  <button class="btn btn-primary w-100" type="submit">Adicionar Turma</button>
+                </div>
+              </form>
+
+              <hr />
+
+              <div id="classList" class="list-group">
+                <!-- Rendered by JS -->
+              </div>
+
+              <div class="mt-3 small text-muted"><strong>Nota:</strong> clique numa turma para a tornar ativa.</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- MIDDLE: Students -->
+        <section class="col-12 col-lg-4">
+          <div class="card shadow-sm">
+            <div class="card-header">
+              <div class="fw-semibold">Alunos</div>
+              <div class="text-muted small">
+                Turma ativa:
+                <span id="activeClassLabel" class="fw-semibold">—</span>
+              </div>
+            </div>
+
+            <div class="card-body">
+              <form id="formAddStudent" class="row g-2">
+                <div class="col-8">
+                  <label class="form-label small mb-1">Nome do aluno</label>
+                  <input id="studentName" class="form-control" placeholder="Ex: Maria Silva" />
+                </div>
+                <div class="col-4">
+                  <label class="form-label small mb-1">N.º</label>
+                  <input id="studentNumber" class="form-control" type="number" min="1" placeholder="Ex: 12" />
+                </div>
+                <div class="col-12">
+                  <button id="btnAddStudent" class="btn btn-outline-primary w-100" type="submit" disabled>
+                    Adicionar Aluno
+                  </button>
+                </div>
+              </form>
+
+              <hr />
+
+              <div id="studentList" class="list-group">
+                <!-- Rendered by JS -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- RIGHT: Grades & Stats -->
+        <section class="col-12 col-lg-4">
+          <div class="card shadow-sm">
+            <div class="card-header">
+              <div class="fw-semibold">Notas & Estatísticas</div>
+              <div class="text-muted small">
+                Aluno ativo:
+                <span id="activeStudentLabel" class="fw-semibold">—</span>
+              </div>
+            </div>
+
+            <div class="card-body">
+              <form id="formAddGrade" class="row g-2">
+                <div class="col-8">
+                  <label class="form-label small mb-1">Nota (0–20)</label>
+                  <input id="gradeValue" class="form-control" type="number" min="0" max="20" step="1" />
+                </div>
+                <div class="col-4 d-flex align-items-end">
+                  <button id="btnAddGrade" class="btn btn-outline-success w-100" type="submit" disabled>
+                    Adicionar
+                  </button>
+                </div>
+              </form>
+
+              <div class="mt-3">
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted small">Notas</span>
+                  <span id="badgeGradeCount" class="badge text-bg-secondary">0</span>
+                </div>
+                <div id="gradeList" class="mt-2 d-flex flex-wrap gap-2">
+                  <!-- Rendered by JS -->
+                </div>
+              </div>
+
+              <hr />
+
+              <div class="row g-2">
+                <div class="col-6">
+                  <div class="stat-box">
+                    <div class="stat-title">Média (Aluno)</div>
+                    <div id="studentAverage" class="stat-value">—</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="stat-box">
+                    <div class="stat-title">Situação</div>
+                    <div id="studentStatus" class="stat-value">—</div>
+                  </div>
+                </div>
+              </div>
+
+              <hr />
+
+              <div class="stat-box">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <div class="stat-title">Estatísticas (Turma ativa)</div>
+                    <div class="text-muted small">Total, aprovados/reprovados, média, melhor aluno</div>
+                  </div>
+                  <button id="btnRecalcStats" class="btn btn-sm btn-outline-secondary" type="button" disabled>
+                    Recalcular
+                  </button>
+                </div>
+
+                <div class="mt-3 small">
+                  <div><strong>Total alunos:</strong> <span id="statTotal">—</span></div>
+                  <div><strong>Aprovados:</strong> <span id="statApproved">—</span></div>
+                  <div><strong>Reprovados:</strong> <span id="statFailed">—</span></div>
+                  <div><strong>Sem avaliação:</strong> <span id="statNoEval">—</span></div>
+                  <div class="mt-2"><strong>Média da turma:</strong> <span id="statClassAvg">—</span></div>
+                  <div><strong>Melhor aluno:</strong> <span id="statBest">—</span></div>
+                </div>
+              </div>
+
+              <div class="mt-3 small text-muted">
+                <strong>Dica:</strong> as estatísticas devem atualizar quando adicionas/removes alunos/notas.
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="py-4">
+      <div class="container text-center text-muted small">Laboratório JS + DOM — ATEC</div>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>
