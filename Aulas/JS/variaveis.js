@@ -13,3 +13,7 @@ console.log("Idade:", idade);
 console.log("Altura:", altura);
 console.log(typeof idade);
 console.log(typeof altura);
+
+const PI = 3.14159; // constante
+console.log("Valor de PI:", PI);
+console.log(typeof PI);
