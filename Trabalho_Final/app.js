@@ -1,42 +1,23 @@
 /* =====================================================
-   Gestor de Escola (VERSÃO ALUNOS) — 50% Starter
-   - JS para iniciantes
-   - Turmas + UI base já estão feitos
-   - Alunos + Notas + Estatísticas ficam para implementar (TODO)
+   Gestor de Escola - Versão Completa
    ===================================================== */
 
-/* -----------------------------
-   Estrutura de dados (exemplo)
------------------------------- */
-/*
-turmas = [
-  {
-    id: 1,
-    nome: "10A",
-    ano: 10,
-    alunos: [
-      { id: 1, nome: "Ana", numero: 3, notas: [12, 15] }
-    ]
-  }
-]
-*/
-
 let turmas = [];
-
-// Seleções
 let turmaSelecionadaId = null;
 let alunoSelecionadoId = null;
 
-// IDs incrementais simples
+// IDs incrementais
 let proximoIdTurma = 1;
 let proximoIdAluno = 1;
+
+// Variáveis para Bónus (Pesquisa e Ordenação)
+let filtroPesquisa = "";
+let ordemDescendente = false;
 
 /* -----------------------------
    Referências ao DOM
 ------------------------------ */
 const zonaAlertas = document.querySelector("#alertHost");
-
-// Turmas
 const formAdicionarTurma = document.querySelector("#formAddClass");
 const inputNomeTurma = document.querySelector("#className");
 const inputAnoTurma = document.querySelector("#classYear");
@@ -44,26 +25,22 @@ const listaTurmas = document.querySelector("#classList");
 const badgeTotalTurmas = document.querySelector("#badgeClassCount");
 const labelTurmaAtiva = document.querySelector("#activeClassLabel");
 
-// Alunos
 const formAdicionarAluno = document.querySelector("#formAddStudent");
 const inputNomeAluno = document.querySelector("#studentName");
 const inputNumeroAluno = document.querySelector("#studentNumber");
 const listaAlunos = document.querySelector("#studentList");
 const botaoAdicionarAluno = document.querySelector("#btnAddStudent");
 
-// Notas
 const formAdicionarNota = document.querySelector("#formAddGrade");
 const inputNota = document.querySelector("#gradeValue");
 const botaoAdicionarNota = document.querySelector("#btnAddGrade");
 const listaNotas = document.querySelector("#gradeList");
 const badgeTotalNotas = document.querySelector("#badgeGradeCount");
 
-// Resumo do aluno
 const labelAlunoAtivo = document.querySelector("#activeStudentLabel");
 const elMediaAluno = document.querySelector("#studentAverage");
 const elSituacaoAluno = document.querySelector("#studentStatus");
 
-// Estatísticas da turma
 const botaoRecalcularStats = document.querySelector("#btnRecalcStats");
 const statTotal = document.querySelector("#statTotal");
 const statAprovados = document.querySelector("#statApproved");
@@ -73,534 +50,373 @@ const statMediaTurma = document.querySelector("#statClassAvg");
 const statMelhorAluno = document.querySelector("#statBest");
 
 /* -----------------------------
-   Alertas (Bootstrap)
+   Alertas e Utilitários
 ------------------------------ */
-function mostrarAlerta(mensagem, tipo) {
-  // tipo: primary, success, warning, danger, info, secondary
-  if (!tipo) tipo = "warning";
-
-  zonaAlertas.innerHTML = `
-    <div class="alert alert-${tipo} alert-dismissible fade show" role="alert">
-      ${mensagem}
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
-    </div>
-  `;
+function mostrarAlerta(mensagem, tipo = "danger") {
+    zonaAlertas.innerHTML = `
+        <div class="alert alert-${tipo} alert-dismissible fade show" role="alert">
+            ${mensagem}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+        </div>`;
 }
 
-function limparAlerta() {
-  zonaAlertas.innerHTML = "";
-}
+function limparAlerta() { zonaAlertas.innerHTML = ""; }
 
-/* -----------------------------
-   Utilitários simples
------------------------------- */
 function paraInteiro(valor) {
-  const n = Number(valor);
-  if (!Number.isFinite(n)) return NaN;
-  return Math.trunc(n);
-}
-
-function paraNumero(valor) {
-  const n = Number(valor);
-  if (!Number.isFinite(n)) return NaN;
-  return n;
+    const n = Math.trunc(Number(valor));
+    return isNaN(n) ? NaN : n;
 }
 
 function obterTurmaSelecionada() {
-  for (let i = 0; i < turmas.length; i++) {
-    if (turmas[i].id === turmaSelecionadaId) return turmas[i];
-  }
-  return null;
+    for (let i = 0; i < turmas.length; i++) {
+        if (turmas[i].id === turmaSelecionadaId) return turmas[i];
+    }
+    return null;
 }
 
 function obterAlunoSelecionado() {
-  const turma = obterTurmaSelecionada();
-  if (!turma) return null;
-
-  for (let i = 0; i < turma.alunos.length; i++) {
-    if (turma.alunos[i].id === alunoSelecionadoId) return turma.alunos[i];
-  }
-  return null;
+    const turma = obterTurmaSelecionada();
+    if (!turma) return null;
+    for (let i = 0; i < turma.alunos.length; i++) {
+        if (turma.alunos[i].id === alunoSelecionadoId) return turma.alunos[i];
+    }
+    return null;
 }
 
 /* -----------------------------
-   Cálculos (simples)
+   Cálculos Base
 ------------------------------ */
 function calcularMediaAluno(aluno) {
-  if (!aluno.notas || aluno.notas.length === 0) return null;
-
-  let soma = 0;
-  for (let i = 0; i < aluno.notas.length; i++) {
-    soma += aluno.notas[i];
-  }
-  return soma / aluno.notas.length;
+    if (!aluno.notas || aluno.notas.length === 0) return null;
+    let soma = 0;
+    for (let i = 0; i < aluno.notas.length; i++) soma += aluno.notas[i];
+    return soma / aluno.notas.length;
 }
 
 function calcularSituacaoAluno(aluno) {
-  const media = calcularMediaAluno(aluno);
-  if (media === null) return "Sem avaliação";
-  if (media >= 10) return "Aprovado";
-  return "Reprovado";
+    const media = calcularMediaAluno(aluno);
+    if (media === null) return "Sem avaliação";
+    return media >= 10 ? "Aprovado" : "Reprovado";
 }
 
 /* -----------------------------
-   Renderização (UI) — FEITO
+   TODO 1: Adicionar Aluno
 ------------------------------ */
+function adicionarAlunoNaTurmaSelecionada(nomeAluno, numeroAluno) {
+    const turma = obterTurmaSelecionada();
+    if (!turma) return;
+
+    if (!nomeAluno || nomeAluno.trim() === "") {
+        mostrarAlerta("O nome é obrigatório.");
+        return;
+    }
+    if (isNaN(numeroAluno) || numeroAluno <= 0) {
+        mostrarAlerta("O número deve ser um inteiro positivo.");
+        return;
+    }
+    for (let i = 0; i < turma.alunos.length; i++) {
+        if (turma.alunos[i].numero === numeroAluno) {
+            mostrarAlerta("Este número já existe nesta turma.");
+            return;
+        }
+    }
+
+    const novoAluno = {
+        id: proximoIdAluno++,
+        nome: nomeAluno.trim(),
+        numero: numeroAluno,
+        notas: []
+    };
+
+    turma.alunos.push(novoAluno);
+    alunoSelecionadoId = novoAluno.id;
+    
+    inputNomeAluno.value = "";
+    inputNumeroAluno.value = "";
+    guardarDados();
+    renderizarTudo();
+}
+
+/* -----------------------------
+   TODO 2: Remover Aluno 
+------------------------------ */
+function removerAluno(idAluno) {
+    const turma = obterTurmaSelecionada();
+    if (!turma) return;
+
+    const novaLista = [];
+    for (let i = 0; i < turma.alunos.length; i++) {
+        if (turma.alunos[i].id !== idAluno) novaLista.push(turma.alunos[i]);
+    }
+    turma.alunos = novaLista;
+
+    if (alunoSelecionadoId === idAluno) alunoSelecionadoId = null;
+
+    guardarDados();
+    renderizarTudo();
+}
+
+/* -----------------------------
+   TODO 3: Adicionar Nota 
+------------------------------ */
+function adicionarNotaAoAlunoSelecionado(valorNota) {
+    const aluno = obterAlunoSelecionado();
+    if (!aluno) return;
+
+    if (isNaN(valorNota) || valorNota < 0 || valorNota > 20) {
+        mostrarAlerta("A nota deve estar entre 0 e 20.");
+        return;
+    }
+
+    aluno.notas.push(valorNota);
+    inputNota.value = "";
+    guardarDados();
+    renderizarTudo();
+}
+
+/* -----------------------------
+   TODO 4: Estatísticas 
+------------------------------ */
+function renderizarEstatisticasTurma() {
+    const turma = obterTurmaSelecionada();
+    if (!turma) {
+        statTotal.textContent = "—"; statAprovados.textContent = "—";
+        statReprovados.textContent = "—"; statSemAvaliacao.textContent = "—";
+        statMediaTurma.textContent = "—"; statMelhorAluno.textContent = "—";
+        return;
+    }
+
+    let aprovados = 0, reprovados = 0, semEval = 0;
+    let somaMedias = 0, contagemMedias = 0;
+    let melhorAluno = null, maiorMedia = -1;
+
+    for (let i = 0; i < turma.alunos.length; i++) {
+        const aluno = turma.alunos[i];
+        const media = calcularMediaAluno(aluno);
+        const situacao = calcularSituacaoAluno(aluno);
+
+        if (situacao === "Aprovado") aprovados++;
+        else if (situacao === "Reprovado") reprovados++;
+        else semEval++;
+
+        if (media !== null) {
+            somaMedias += media;
+            contagemMedias++;
+            if (media > maiorMedia) {
+                maiorMedia = media;
+                melhorAluno = aluno;
+            }
+        }
+    }
+
+    statTotal.textContent = turma.alunos.length;
+    statAprovados.textContent = aprovados;
+    statReprovados.textContent = reprovados;
+    statSemAvaliacao.textContent = semEval;
+    statMediaTurma.textContent = contagemMedias > 0 ? (somaMedias / contagemMedias).toFixed(2) : "0.00";
+    statMelhorAluno.textContent = melhorAluno ? `${melhorAluno.nome} (${maiorMedia.toFixed(1)})` : "—";
+}
+
+/* -----------------------------
+   Renderização e Persistência
+------------------------------ */
+function guardarDados() {
+    const dados = { turmas, proximoIdTurma, proximoIdAluno };
+    localStorage.setItem("gestor_escola_atec", JSON.stringify(dados));
+}
+
+function carregarDados() {
+    const guardado = localStorage.getItem("gestor_escola_atec");
+    if (guardado) {
+        const d = JSON.parse(guardado);
+        turmas = d.turmas;
+        proximoIdTurma = d.proximoIdTurma;
+        proximoIdAluno = d.proximoIdAluno;
+    }
+}
+
 function renderizarTudo() {
-  renderizarTurmas();
-  renderizarAlunos();
-  renderizarNotas();
-  renderizarResumoAluno();
-  renderizarEstatisticasTurma();
-  sincronizarControlos();
+    renderizarTurmas();
+    renderizarAlunos();
+    renderizarNotas();
+    renderizarResumoAluno();
+    renderizarEstatisticasTurma();
+    sincronizarControlos();
 }
 
 function renderizarTurmas() {
-  badgeTotalTurmas.textContent = String(turmas.length);
-  listaTurmas.innerHTML = "";
-
-  if (turmas.length === 0) {
-    listaTurmas.innerHTML = `<div class="text-muted small">Sem turmas. Cria a primeira turma acima.</div>`;
-    labelTurmaAtiva.textContent = "—";
-    return;
-  }
-
-  for (let i = 0; i < turmas.length; i++) {
-    const turma = turmas[i];
-    const estaAtiva = turma.id === turmaSelecionadaId;
-
-    const item = document.createElement("button");
-    item.type = "button";
-    item.className = "list-group-item list-group-item-action d-flex justify-content-between align-items-center";
-    if (estaAtiva) item.classList.add("active");
-
-    item.innerHTML = `
-      <div class="me-2">
-        <div class="fw-semibold">${turma.nome}</div>
-        <div class="small ${estaAtiva ? "text-white-50" : "text-muted"}">
-          Ano ${turma.ano} • ${turma.alunos.length} aluno(s)
-        </div>
-      </div>
-      <div class="d-flex gap-2">
-        <span class="badge ${estaAtiva ? "text-bg-light" : "text-bg-secondary"}">ID ${turma.id}</span>
-        <span class="btn btn-sm ${estaAtiva ? "btn-light" : "btn-outline-danger"}"
-              data-acao="remover-turma" data-id="${turma.id}">
-          Remover
-        </span>
-      </div>
-    `;
-
-    item.addEventListener("click", (ev) => {
-      const alvo = ev.target;
-
-      if (alvo && alvo.dataset && alvo.dataset.acao === "remover-turma") {
-        ev.stopPropagation();
-        const id = paraInteiro(alvo.dataset.id);
-        removerTurma(id);
+    badgeTotalTurmas.textContent = turmas.length;
+    listaTurmas.innerHTML = "";
+    if (turmas.length === 0) {
+        listaTurmas.innerHTML = `<div class="text-muted small">Sem turmas.</div>`;
+        labelTurmaAtiva.textContent = "—";
         return;
-      }
+    }
 
-      selecionarTurma(turma.id);
-    });
-
-    listaTurmas.appendChild(item);
-  }
-
-  const turmaSelecionada = obterTurmaSelecionada();
-  labelTurmaAtiva.textContent = turmaSelecionada ? `${turmaSelecionada.nome} (Ano ${turmaSelecionada.ano})` : "—";
+    for (let i = 0; i < turmas.length; i++) {
+        const t = turmas[i];
+        const ativa = t.id === turmaSelecionadaId;
+        const item = document.createElement("button");
+        item.className = `list-group-item list-group-item-action d-flex justify-content-between ${ativa ? 'active' : ''}`;
+        item.innerHTML = `
+            <div><b>${t.nome}</b><br><small>Ano ${t.ano} • ${t.alunos.length} alunos</small></div>
+            <span class="btn btn-sm ${ativa ? 'btn-light' : 'btn-outline-danger'}" data-id="${t.id}" data-acao="rem-t">Remover</span>`;
+        
+        item.onclick = (e) => {
+            if (e.target.dataset.acao === "rem-t") {
+                removerTurma(paraInteiro(e.target.dataset.id));
+            } else {
+                turmaSelecionadaId = t.id;
+                alunoSelecionadoId = null;
+                renderizarTudo();
+            }
+        };
+        listaTurmas.appendChild(item);
+    }
+    const sel = obterTurmaSelecionada();
+    labelTurmaAtiva.textContent = sel ? `${sel.nome} (Ano ${sel.ano})` : "—";
 }
 
 function renderizarAlunos() {
-  listaAlunos.innerHTML = "";
+    listaAlunos.innerHTML = "";
+    const turma = obterTurmaSelecionada();
+    if (!turma) return;
 
-  const turma = obterTurmaSelecionada();
-  if (!turma) {
-    listaAlunos.innerHTML = `<div class="text-muted small">Seleciona uma turma para gerir alunos.</div>`;
-    return;
-  }
+    // Criamos uma cópia para não alterar a ordem original da base de dados
+    let alunosParaExibir = [...turma.alunos];
 
-  if (turma.alunos.length === 0) {
-    listaAlunos.innerHTML = `<div class="text-muted small">Sem alunos nesta turma. Adiciona o primeiro aluno acima.</div>`;
-    return;
-  }
+    // BÓNUS: Filtro de Pesquisa 
+    if (filtroPesquisa) {
+        alunosParaExibir = alunosParaExibir.filter(a => 
+            a.nome.toLowerCase().includes(filtroPesquisa.toLowerCase()) || 
+            String(a.numero).includes(filtroPesquisa)
+        );
+    }
 
-  for (let i = 0; i < turma.alunos.length; i++) {
-    const aluno = turma.alunos[i];
-    const estaAtivo = aluno.id === alunoSelecionadoId;
+    // BÓNUS: Ordenação por Média (Melhor para Pior) 
+    if (ordemDescendente) {
+        alunosParaExibir.sort((a, b) => {
+            const mediaA = calcularMediaAluno(a) || 0; // Se não tiver nota, assume 0 
+            const mediaB = calcularMediaAluno(b) || 0;
+            return mediaB - mediaA; // Ordem descendente
+        });
+    }
 
-    const media = calcularMediaAluno(aluno);
-    const situacao = calcularSituacaoAluno(aluno);
+    // Renderização dos alunos filtrados/ordenados
+    for (let i = 0; i < alunosParaExibir.length; i++) {
+        const a = alunosParaExibir[i];
+        const ativo = a.id === alunoSelecionadoId;
+        const item = document.createElement("button");
+        item.className = `list-group-item list-group-item-action d-flex justify-content-between ${ativo ? 'active' : ''}`;
+        
+        const media = calcularMediaAluno(a);
+        const mediaTexto = media !== null ? media.toFixed(1) : "—";
 
-    const item = document.createElement("button");
-    item.type = "button";
-    item.className = "list-group-item list-group-item-action d-flex justify-content-between align-items-center";
-    if (estaAtivo) item.classList.add("active");
-
-    item.innerHTML = `
-      <div class="me-2">
-        <div class="fw-semibold">${aluno.numero} — ${aluno.nome}</div>
-        <div class="small ${estaAtivo ? "text-white-50" : "text-muted"}">
-          Média: ${media === null ? "—" : media.toFixed(1)} • ${situacao}
-        </div>
-      </div>
-      <div class="d-flex gap-2">
-        <span class="btn btn-sm ${estaAtivo ? "btn-light" : "btn-outline-danger"}"
-              data-acao="remover-aluno" data-id="${aluno.id}">
-          Remover
-        </span>
-      </div>
-    `;
-
-    item.addEventListener("click", (ev) => {
-      const alvo = ev.target;
-
-      if (alvo && alvo.dataset && alvo.dataset.acao === "remover-aluno") {
-        ev.stopPropagation();
-        const id = paraInteiro(alvo.dataset.id);
-        removerAluno(id); // TODO (alunos)
-        return;
-      }
-
-      selecionarAluno(aluno.id);
-    });
-
-    listaAlunos.appendChild(item);
-  }
+        item.innerHTML = `
+            <div>
+                <b>${a.numero} — ${a.nome}</b><br>
+                <small class="${ativo ? 'text-white-50' : 'text-muted'}">Média: ${mediaTexto}</small>
+            </div>
+            <span class="btn btn-sm ${ativo ? 'btn-light' : 'btn-outline-danger'}" data-id="${a.id}" data-acao="rem-a">Remover</span>`;
+        
+        item.onclick = (e) => {
+            if (e.target.dataset.acao === "rem-a") {
+                removerAluno(paraInteiro(e.target.dataset.id));
+            } else {
+                alunoSelecionadoId = a.id;
+                renderizarTudo();
+            }
+        };
+        listaAlunos.appendChild(item);
+    }
 }
 
 function renderizarNotas() {
-  listaNotas.innerHTML = "";
-
-  const aluno = obterAlunoSelecionado();
-  badgeTotalNotas.textContent = aluno ? String(aluno.notas.length) : "0";
-
-  if (!aluno) {
-    listaNotas.innerHTML = `<div class="text-muted small">Seleciona um aluno para gerir notas.</div>`;
-    labelAlunoAtivo.textContent = "—";
-    return;
-  }
-
-  labelAlunoAtivo.textContent = `${aluno.numero} — ${aluno.nome}`;
-
-  if (aluno.notas.length === 0) {
-    listaNotas.innerHTML = `<div class="text-muted small">Sem notas. Adiciona uma nota acima.</div>`;
-    return;
-  }
-
-  for (let i = 0; i < aluno.notas.length; i++) {
-    const nota = aluno.notas[i];
-    const pill = document.createElement("span");
-    pill.className = "badge text-bg-success badge-grade";
-    pill.textContent = String(nota);
-    listaNotas.appendChild(pill);
-  }
+    listaNotas.innerHTML = "";
+    const a = obterAlunoSelecionado();
+    badgeTotalNotas.textContent = a ? a.notas.length : "0";
+    labelAlunoAtivo.textContent = a ? `${a.numero} — ${a.nome}` : "—";
+    if (!a) return;
+    for (let n of a.notas) {
+        const span = document.createElement("span");
+        span.className = "badge text-bg-success me-1";
+        span.textContent = n;
+        listaNotas.appendChild(span);
+    }
 }
 
 function renderizarResumoAluno() {
-  const aluno = obterAlunoSelecionado();
-  if (!aluno) {
-    elMediaAluno.textContent = "—";
-    elSituacaoAluno.textContent = "—";
-    return;
-  }
-
-  const media = calcularMediaAluno(aluno);
-  elMediaAluno.textContent = media === null ? "—" : media.toFixed(1);
-  elSituacaoAluno.textContent = calcularSituacaoAluno(aluno);
+    const a = obterAlunoSelecionado();
+    elMediaAluno.textContent = a ? (calcularMediaAluno(a)?.toFixed(1) || "—") : "—";
+    elSituacaoAluno.textContent = a ? calcularSituacaoAluno(a) : "—";
 }
 
-/* -----------------------------
-   Ações de Turmas — FEITO
------------------------------- */
-function selecionarTurma(idTurma) {
-  turmaSelecionadaId = idTurma;
-  alunoSelecionadoId = null;
-  limparAlerta();
-  renderizarTudo();
-}
-
-function selecionarAluno(idAluno) {
-  alunoSelecionadoId = idAluno;
-  limparAlerta();
-  renderizarTudo();
-}
-
-function adicionarTurma(nome, ano) {
-  if (!nome || !nome.trim()) {
-    mostrarAlerta("O nome da turma é obrigatório.", "danger");
-    return;
-  }
-
-  if (!Number.isFinite(ano) || ano < 10 || ano > 12) {
-    mostrarAlerta("O ano da turma deve estar entre 10 e 12.", "danger");
-    return;
-  }
-
-  const turma = {
-    id: proximoIdTurma++,
-    nome: nome.trim(),
-    ano: ano,
-    alunos: [],
-  };
-
-  turmas.push(turma);
-
-  turmaSelecionadaId = turma.id;
-  alunoSelecionadoId = null;
-
-  limparAlerta();
-  renderizarTudo();
-}
-
-function removerTurma(idTurma) {
-  const novasTurmas = [];
-  for (let i = 0; i < turmas.length; i++) {
-    if (turmas[i].id !== idTurma) novasTurmas.push(turmas[i]);
-  }
-  turmas = novasTurmas;
-
-  if (turmaSelecionadaId === idTurma) {
-    turmaSelecionadaId = turmas.length > 0 ? turmas[0].id : null;
-    alunoSelecionadoId = null;
-  }
-
-  limparAlerta();
-  renderizarTudo();
-}
-
-/* -----------------------------
-   TODO (ALUNOS) — 50% do trabalho
------------------------------- */
-
-/* TODO 1: Adicionar aluno na turma selecionada (com validações)
-   Regras:
-   - nome não vazio
-   - numero inteiro > 0
-   - numero não pode repetir na mesma turma
-   - ao adicionar: turma.alunos.push(...)
-   - opcional: selecionar automaticamente o novo aluno
-*/
-/* TODO 1: Adicionar aluno na turma selecionada */
-function adicionarAlunoNaTurmaSelecionada(nomeAluno, numeroAluno) {
-  const turma = obterTurmaSelecionada();
-  if (!turma) {
-    mostrarAlerta("Seleciona uma turma primeiro!", "danger");
-    return;
-  }
-
-  // Validação: nome não vazio
-  if (!nomeAluno || nomeAluno.trim() === "") {
-    mostrarAlerta("O nome do aluno é obrigatório.", "danger");
-    return;
-  }
-
-  // Validação: número inteiro positivo
-  if (isNaN(numeroAluno) || numeroAluno <= 0) {
-    mostrarAlerta("O número deve ser um inteiro positivo.", "danger");
-    return;
-  }
-
-  // Validação: o número não pode repetir na mesma turma
-  for (let i = 0; i < turma.alunos.length; i++) {
-    if (turma.alunos[i].numero === numeroAluno) {
-      mostrarAlerta("Este número de aluno já existe nesta turma.", "danger");
-      return;
-    }
-  }
-
-  // Criar o objeto aluno
-  const novoAluno = {
-    id: proximoIdAluno++,
-    nome: nomeAluno.trim(),
-    numero: numeroAluno,
-    notas: []
-  };
-
-  // Guardar e selecionar
-  turma.alunos.push(novoAluno);
-  alunoSelecionadoId = novoAluno.id;
-
-  // Limpar formulário e atualizar ecrã
-  inputNomeAluno.value = "";
-  inputNumeroAluno.value = "";
-  limparAlerta();
-  renderizarTudo();
-}
-
-/* TODO 2: Remover aluno */
-function removerAluno(idAluno) {
-  const turma = obterTurmaSelecionada();
-  if (!turma) return;
-
-  const listaFiltrada = [];
-  for (let i = 0; i < turma.alunos.length; i++) {
-    if (turma.alunos[i].id !== idAluno) {
-      listaFiltrada.push(turma.alunos[i]);
-    }
-  }
-  
-  turma.alunos = listaFiltrada;
-
-  // Se era o aluno selecionado, limpar a seleção
-  if (alunoSelecionadoId === idAluno) {
-    alunoSelecionadoId = null;
-  }
-
-  limparAlerta();
-  renderizarTudo();
-}
-
-/* TODO 3: Adicionar nota ao aluno selecionado */
-function adicionarNotaAoAlunoSelecionado(valorNota) {
-  const aluno = obterAlunoSelecionado();
-  if (!aluno) return;
-
-  // Validar nota (0 a 20)
-  if (isNaN(valorNota) || valorNota < 0 || valorNota > 20) {
-    mostrarAlerta("A nota deve estar entre 0 e 20.", "danger");
-    return;
-  }
-
-  aluno.notas.push(valorNota);
-  inputNota.value = ""; 
-
-  limparAlerta();
-  renderizarTudo();
-}
-
-/* TODO 4: Estatísticas da turma */
-function renderizarEstatisticasTurma() {
-  const turma = obterTurmaSelecionada();
-
-  if (!turma) {
-    statTotal.textContent = "—";
-    statAprovados.textContent = "—";
-    statReprovados.textContent = "—";
-    statSemAvaliacao.textContent = "—";
-    statMediaTurma.textContent = "—";
-    statMelhorAluno.textContent = "—";
-    return;
-  }
-
-  let aprovados = 0;
-  let reprovados = 0;
-  let semAvaliacao = 0;
-  let somaDasMedias = 0;
-  let alunosComNotas = 0;
-  let melhorAlunoObj = null;
-  let maiorMedia = -1;
-
-  for (let i = 0; i < turma.alunos.length; i++) {
-    const aluno = turma.alunos[i];
-    const media = calcularMediaAluno(aluno);
-    const situacao = calcularSituacaoAluno(aluno);
-
-    // Contagem por situação
-    if (situacao === "Aprovado") {
-      aprovados++;
-    } else if (situacao === "Reprovado") {
-      reprovados++;
-    } else {
-      semAvaliacao++;
-    }
-
-    // Cálculos para média global e melhor aluno
-    if (media !== null) {
-      somaDasMedias += media;
-      alunosComNotas++;
-
-      if (media > maiorMedia) {
-        maiorMedia = media;
-        melhorAlunoObj = aluno;
-      }
-    }
-  }
-
-  // Atualizar o DOM com os valores calculados
-  statTotal.textContent = String(turma.alunos.length);
-  statAprovados.textContent = String(aprovados);
-  statReprovados.textContent = String(reprovados);
-  statSemAvaliacao.textContent = String(semAvaliacao);
-  
-  const mediaTurma = alunosComNotas > 0 ? (somaDasMedias / alunosComNotas).toFixed(2) : "0.00";
-  statMediaTurma.textContent = mediaTurma;
-
-  statMelhorAluno.textContent = melhorAlunoObj ? `${melhorAlunoObj.nome} (${maiorMedia.toFixed(1)})` : "—";
-}
-
-/* -----------------------------
-   Eventos (forms/botões) — FEITO
------------------------------- */
-formAdicionarTurma.addEventListener("submit", (ev) => {
-  ev.preventDefault();
-
-  const nome = inputNomeTurma.value;
-  const ano = paraInteiro(inputAnoTurma.value);
-
-  adicionarTurma(nome, ano);
-
-  inputNomeTurma.value = "";
-  inputNomeTurma.focus();
-});
-
-formAdicionarAluno.addEventListener("submit", (ev) => {
-  ev.preventDefault();
-
-  const nomeAluno = inputNomeAluno.value;
-  const numeroAluno = paraInteiro(inputNumeroAluno.value);
-
-  adicionarAlunoNaTurmaSelecionada(nomeAluno, numeroAluno);
-
-  // (opcional) limpar campos no sucesso — fica ao critério dos alunos
-});
-
-formAdicionarNota.addEventListener("submit", (ev) => {
-  ev.preventDefault();
-
-  const nota = paraNumero(inputNota.value);
-  adicionarNotaAoAlunoSelecionado(nota);
-
-  // (opcional) limpar no sucesso — fica ao critério dos alunos
-});
-
-botaoRecalcularStats.addEventListener("click", () => {
-  renderizarEstatisticasTurma();
-});
-
-/* -----------------------------
-   Controlos (ativar/desativar)
------------------------------- */
 function sincronizarControlos() {
-  const existeTurma = !!obterTurmaSelecionada();
-  botaoAdicionarAluno.disabled = !existeTurma;
-  botaoRecalcularStats.disabled = !existeTurma;
-
-  const existeAluno = !!obterAlunoSelecionado();
-  botaoAdicionarNota.disabled = !existeAluno;
+    const t = !!obterTurmaSelecionada();
+    botaoAdicionarAluno.disabled = !t;
+    botaoRecalcularStats.disabled = !t;
+    botaoAdicionarNota.disabled = !obterAlunoSelecionado();
 }
 
 /* -----------------------------
-   Dados de exemplo (pode ser removido)
+   Eventos de Turmas
 ------------------------------ */
-function criarDadosExemplo() {
-  turmas = [
-    {
-      id: proximoIdTurma++,
-      nome: "10A",
-      ano: 10,
-      alunos: [
-        { id: proximoIdAluno++, nome: "Ana", numero: 3, notas: [12, 15, 14] },
-        { id: proximoIdAluno++, nome: "Bruno", numero: 7, notas: [8, 9] },
-      ],
-    },
-  ];
+function adicionarTurma(nome, ano) {
+    if (!nome || nome.trim() === "" || ano < 10 || ano > 12) {
+        mostrarAlerta("Dados da turma inválidos."); return;
+    }
+    const nova = { id: proximoIdTurma++, nome: nome.trim(), ano, alunos: [] };
+    turmas.push(nova);
+    turmaSelecionadaId = nova.id;
+    guardarDados();
+    renderizarTudo();
+}
 
-  turmaSelecionadaId = turmas[0].id;
-  alunoSelecionadoId = turmas[0].alunos[0].id;
+function removerTurma(id) {
+    turmas = turmas.filter(t => t.id !== id);
+    if (turmaSelecionadaId === id) {
+        turmaSelecionadaId = turmas.length > 0 ? turmas[0].id : null;
+        alunoSelecionadoId = null;
+    }
+    guardarDados();
+    renderizarTudo();
 }
 
 /* -----------------------------
    Inicialização
 ------------------------------ */
-criarDadosExemplo(); // comente esta linha se não quiseres exemplos
+const inputPesquisa = document.querySelector("#inputSearch");
+const checkOrdenar = document.querySelector("#checkOrder");
+
+// Evento: Pesquisar enquanto escreve
+inputPesquisa.addEventListener("input", (e) => {
+    filtroPesquisa = e.target.value; // Atualiza a variável global de bónus 
+    renderizarAlunos(); // Atualiza a lista instantaneamente com o novo filtro
+});
+
+// Evento: Alternar ordenação
+checkOrdenar.addEventListener("change", (e) => {
+    ordemDescendente = e.target.checked; // Ativa/Desativa o bónus de ordenação 
+    renderizarAlunos();
+});
+
+formAdicionarTurma.onsubmit = (e) => {
+    e.preventDefault();
+    adicionarTurma(inputNomeTurma.value, paraInteiro(inputAnoTurma.value));
+    inputNomeTurma.value = "";
+};
+
+formAdicionarAluno.onsubmit = (e) => {
+    e.preventDefault();
+    adicionarAlunoNaTurmaSelecionada(inputNomeAluno.value, paraInteiro(inputNumeroAluno.value));
+};
+
+formAdicionarNota.onsubmit = (e) => {
+    e.preventDefault();
+    adicionarNotaAoAlunoSelecionado(paraInteiro(inputNota.value));
+};
+
+botaoRecalcularStats.onclick = renderizarEstatisticasTurma;
+
+carregarDados();
 renderizarTudo();
