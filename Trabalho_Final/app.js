@@ -380,36 +380,95 @@ function removerTurma(idTurma) {
    - ao adicionar: turma.alunos.push(...)
    - opcional: selecionar automaticamente o novo aluno
 */
+/* TODO 1: Adicionar aluno na turma selecionada */
 function adicionarAlunoNaTurmaSelecionada(nomeAluno, numeroAluno) {
-  // TODO: implementar
-  mostrarAlerta("TODO: Implementar adicionarAlunoNaTurmaSelecionada()", "warning");
+  const turma = obterTurmaSelecionada();
+  if (!turma) {
+    mostrarAlerta("Seleciona uma turma primeiro!", "danger");
+    return;
+  }
+
+  // Validação: nome não vazio
+  if (!nomeAluno || nomeAluno.trim() === "") {
+    mostrarAlerta("O nome do aluno é obrigatório.", "danger");
+    return;
+  }
+
+  // Validação: número inteiro positivo
+  if (isNaN(numeroAluno) || numeroAluno <= 0) {
+    mostrarAlerta("O número deve ser um inteiro positivo.", "danger");
+    return;
+  }
+
+  // Validação: o número não pode repetir na mesma turma
+  for (let i = 0; i < turma.alunos.length; i++) {
+    if (turma.alunos[i].numero === numeroAluno) {
+      mostrarAlerta("Este número de aluno já existe nesta turma.", "danger");
+      return;
+    }
+  }
+
+  // Criar o objeto aluno
+  const novoAluno = {
+    id: proximoIdAluno++,
+    nome: nomeAluno.trim(),
+    numero: numeroAluno,
+    notas: []
+  };
+
+  // Guardar e selecionar
+  turma.alunos.push(novoAluno);
+  alunoSelecionadoId = novoAluno.id;
+
+  // Limpar formulário e atualizar ecrã
+  inputNomeAluno.value = "";
+  inputNumeroAluno.value = "";
+  limparAlerta();
+  renderizarTudo();
 }
 
-/* TODO 2: Remover aluno
-   - remover do array turma.alunos
-   - se era o aluno selecionado, limpar alunoSelecionadoId
-*/
+/* TODO 2: Remover aluno */
 function removerAluno(idAluno) {
-  // TODO: implementar
-  mostrarAlerta("TODO: Implementar removerAluno()", "warning");
+  const turma = obterTurmaSelecionada();
+  if (!turma) return;
+
+  const listaFiltrada = [];
+  for (let i = 0; i < turma.alunos.length; i++) {
+    if (turma.alunos[i].id !== idAluno) {
+      listaFiltrada.push(turma.alunos[i]);
+    }
+  }
+  
+  turma.alunos = listaFiltrada;
+
+  // Se era o aluno selecionado, limpar a seleção
+  if (alunoSelecionadoId === idAluno) {
+    alunoSelecionadoId = null;
+  }
+
+  limparAlerta();
+  renderizarTudo();
 }
 
-/* TODO 3: Adicionar nota ao aluno selecionado (0-20)
-   - validar nota (0..20)
-   - adicionar a aluno.notas
-   - limpar input
-*/
+/* TODO 3: Adicionar nota ao aluno selecionado */
 function adicionarNotaAoAlunoSelecionado(valorNota) {
-  // TODO: implementar
-  mostrarAlerta("TODO: Implementar adicionarNotaAoAlunoSelecionado()", "warning");
+  const aluno = obterAlunoSelecionado();
+  if (!aluno) return;
+
+  // Validar nota (0 a 20)
+  if (isNaN(valorNota) || valorNota < 0 || valorNota > 20) {
+    mostrarAlerta("A nota deve estar entre 0 e 20.", "danger");
+    return;
+  }
+
+  aluno.notas.push(valorNota);
+  inputNota.value = ""; 
+
+  limparAlerta();
+  renderizarTudo();
 }
 
-/* TODO 4: Estatísticas da turma
-   - total alunos
-   - aprovados / reprovados / sem avaliação
-   - média da turma (média das médias dos alunos com notas)
-   - melhor aluno (maior média)
-*/
+/* TODO 4: Estatísticas da turma */
 function renderizarEstatisticasTurma() {
   const turma = obterTurmaSelecionada();
 
@@ -423,13 +482,50 @@ function renderizarEstatisticasTurma() {
     return;
   }
 
-  // TODO: implementar estatísticas
+  let aprovados = 0;
+  let reprovados = 0;
+  let semAvaliacao = 0;
+  let somaDasMedias = 0;
+  let alunosComNotas = 0;
+  let melhorAlunoObj = null;
+  let maiorMedia = -1;
+
+  for (let i = 0; i < turma.alunos.length; i++) {
+    const aluno = turma.alunos[i];
+    const media = calcularMediaAluno(aluno);
+    const situacao = calcularSituacaoAluno(aluno);
+
+    // Contagem por situação
+    if (situacao === "Aprovado") {
+      aprovados++;
+    } else if (situacao === "Reprovado") {
+      reprovados++;
+    } else {
+      semAvaliacao++;
+    }
+
+    // Cálculos para média global e melhor aluno
+    if (media !== null) {
+      somaDasMedias += media;
+      alunosComNotas++;
+
+      if (media > maiorMedia) {
+        maiorMedia = media;
+        melhorAlunoObj = aluno;
+      }
+    }
+  }
+
+  // Atualizar o DOM com os valores calculados
   statTotal.textContent = String(turma.alunos.length);
-  statAprovados.textContent = "TODO";
-  statReprovados.textContent = "TODO";
-  statSemAvaliacao.textContent = "TODO";
-  statMediaTurma.textContent = "TODO";
-  statMelhorAluno.textContent = "TODO";
+  statAprovados.textContent = String(aprovados);
+  statReprovados.textContent = String(reprovados);
+  statSemAvaliacao.textContent = String(semAvaliacao);
+  
+  const mediaTurma = alunosComNotas > 0 ? (somaDasMedias / alunosComNotas).toFixed(2) : "0.00";
+  statMediaTurma.textContent = mediaTurma;
+
+  statMelhorAluno.textContent = melhorAlunoObj ? `${melhorAlunoObj.nome} (${maiorMedia.toFixed(1)})` : "—";
 }
 
 /* -----------------------------
